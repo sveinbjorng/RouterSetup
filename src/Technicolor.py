@@ -3,8 +3,9 @@ Created on Jun 4, 2014
 
 @author: sveinbjorn
 '''
-import urllib2, urllib, cookielib, re, hashlib #@UnresolvedImport
+import urllib2, urllib, cookielib, re, hashlib, sys #@UnresolvedImport
 from urllib2 import HTTPError #@UnresolvedImport
+from py2app.script_py2applet import raw_input
 class TG589:
     def __init__(self):
         self.loginUrl = "http://192.168.1.254/login.lp"
@@ -56,7 +57,7 @@ class TG589:
             for y in postWifi:
                 if "HTTP/1.0 403 Forbidden" in y:
                     print "Wireless: setup failed!"
-                    return 500;
+                    sys.exit()
             print "Wireless: Done!"
             return 0
         
@@ -112,6 +113,7 @@ if __name__ == '__main__':
         print "PPPoE: Trying to setup PPPoE.."
         router.ConfigurePPPoE(username, password)
     print "Router setup is complete!"
+    bla = raw_input("Press enter to exit.")
     
     
     

@@ -3,10 +3,10 @@ Created on Jun 5, 2014
 
 @author: sveinbjorn
 '''
-import urllib2, urllib, cookielib, re, hashlib #@UnresolvedImport
+import urllib2, urllib, cookielib, re, hashlib, base64, sys #@UnresolvedImport
 from urllib2 import HTTPError #@UnresolvedImport
 
-class E900:
+class FirmwareX:
     def __init__(self):
         self.unsecuredUrl = "http://192.168.1.1:52000/UnsecuredEnable.cgi"
         self.loginUrl = "http://192.168.1.1/login.cgi"
@@ -18,7 +18,6 @@ class E900:
     def MakeSekret(self, data):
         pseed2 = ""
         buffer1 = data
-        md5str2 = ""
         length2 = len(data)
         
         if(length2 < 10):
@@ -66,13 +65,18 @@ class E900:
                                         "http_username":"admin",
                                         "http_passwd":self.MakeSekret("admin"),
                                    }))
-        login = self.opener.open(self.loginUrl, params)
-        for l in login:
-            if 'document.location.href = "' in l:
-                p = re.compile(ur'\;(.*?)\"')
-                p = re.findall(p, l)
-                self.sessionId = ''.join(p)
-        print "Login: Done!"
+        try:
+            login = self.opener.open(self.loginUrl, params)
+            for l in login:
+                if 'document.location.href = "' in l:
+                    p = re.compile(ur'\;(.*?)\"')
+                    p = re.findall(p, l)
+                    self.sessionId = ''.join(p)
+            print "Login: Done!"
+            
+        except HTTPError, e:
+            print "Login: Failed! Error: " + str(e.getcode())
+            sys.exit()
                 
     def ConfigureSSID(self, ssid, channel):
         headers = [('Referer','http://192.168.1.1/Wireless_Basic.asp;' + self.sessionId)]
@@ -97,8 +101,13 @@ class E900:
             "_wl0_nbw":"20",
             "_wl0_channel":"11",
             "closed_24g":"0"}))
-        self.opener.open(self.applyUrl+self.sessionId, params)
-        print "Wireless: SSID configured!"
+        try:
+            self.opener.open(self.applyUrl+self.sessionId, params)
+            print "Wireless: SSID configured!"
+            
+        except HTTPError, e:
+            print "Wireless: SSID configuration failed! Error: " + str(e.getcode())
+            sys.exit()
         
     def ConfigureWirelessKey(self, wirelessKey):    
         headers = [('Referer', 'http://192.168.1.1/WL_WPATable.asp;' + self.sessionId)]
@@ -118,9 +127,13 @@ class E900:
             "wl0_security_mode":"wpa_wpa2_mixed",
             "wl0_wpa_psk":wirelessKey                    
         }))
-        self.opener.open(self.applyUrl+self.sessionId, params)
-        print "Wireless: Wireless security configured!"
-        print "Wireless: Done!"
+        try: 
+            self.opener.open(self.applyUrl+self.sessionId, params)
+            print "Wireless: Wireless security configured!"
+            print "Wireless: Done!"
+        except HTTPError, e:
+            print "Wireless: Wireless security configuration failed! Error: " + str(e.getcode())
+            sys.exit()
     
     def DisableWMMSupport(self):
         headers = [('Referer', 'http://192.168.1.1/QoS.asp;' + self.sessionId)]
@@ -143,8 +156,136 @@ class E900:
             "pro2":"0",
             "pro3":"0"}))
         
-        self.opener.open(self.applyUrl+self.sessionId, params)
-        print "WMM Support: Done!"
+        try:
+            self.opener.open(self.applyUrl+self.sessionId, params)
+            print "WMM Support: Done!"
+        except HTTPError, e:
+            print "WMM Support: Failed! Error: " + str(e.getcode())
+            sys.exit()
+        
+class FirmwareY:
+    def __init__(self):
+        self.opener = None
+        self.cj = None
+        self.loginUrl = "http://192.168.1.1/"
+        self.applyUrl = "http://192.168.1.1/cgi-bin/apply.cgi"
+        self.base64Secret = ""
+        
+    def LoginToRouter(self):
+        self.opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(self.cj)) 
+        urllib2.install_opener(self.opener)
+        
+        self.base64Secret = base64.encodestring('%s:%s' % ("admin", "admin")).replace('\n', '')
+        headers = [('Authorization', 'Basic ' + self.base64Secret)]
+        self.opener.addheaders = headers
+
+        try:
+            self.opener.open(self.loginUrl)
+            print "Login: Done!"
+            
+        except HTTPError, e:
+            print "Login: Failed! Error: " + str(e.getcode())
+            sys.exit()
+    
+    def ConfigureSSID(self, ssid, channel):
+        headers = [('Referer','http://192.168.1.1/index.stm?title=Wireless-Basic%20Wireless%20Settings'),
+                   ('Authorization', 'Basic ' + self.base64Secret)]
+        self.opener.addheaders = headers
+        
+        params = urllib.urlencode(dict({
+            "delay":"0",
+            "submit_type":"",
+            "wsc_result":"",
+            "wsc_security_mode":"",
+            "GoToWeb":"",
+            "wlConf":"0",
+            "op_mode":"7",
+            "wl_ssid":ssid,
+            "bandwidth":"0",
+            "channel":channel,
+            "wlan_broadcast":"1",
+            "wsc_enrpin":"",
+            "exec_cgis":"WirBWS",
+            "ret_url":"/index.stm?title=Wireless-Basic%20Wireless%20Settings"}))
+        try:
+            self.opener.open(self.applyUrl, params)
+            print "Wireless: SSID configured!"
+            
+        except HTTPError, e:
+            print "Wireless: SSID configuration failed! Error: " + str(e.getcode())
+            sys.exit()
+        
+    def ConfigureWirelessKey(self, key):
+        headers = [('Referer','http://192.168.1.1/index.stm?title=Wireless-Wireless%20Security'),
+                   ('Authorization', 'Basic ' + self.base64Secret)]
+        self.opener.addheaders = headers
+        
+        params = urllib.urlencode(dict({
+            "delay":"0",
+            "sec_mode":"psk1",
+            "enc_type":"1",
+            "sharedkey":key,
+            "rds_ip1":"0",
+            "rds_ip2":"0",
+            "rds_ip3":"0",
+            "rds_ip4":"0",
+            "rds_port":"1812",
+            "rds_secret":"",
+            "group_key_second":"3600",
+            "encryption_type":"0",
+            "passPhrase":"",
+            "generate":"0",
+            "key1":"",
+            "key2":"",
+            "key3":"",
+            "key4":"",
+            "TX_Key":"0",
+            "exec_cgis":"WirWS",
+            "ret_url":"/index.stm?title=Wireless-Wireless%20Security"}))
+        
+        try:
+            self.opener.open(self.applyUrl, params)
+            print "Wireless: Wireless key configured!"
+            
+        except HTTPError, e:
+            print "Wireless: Wireless key configuration failed! Error: " + str(e.getcode())
+            sys.exit()
+    
+    def DisableWMMSupport(self):
+        headers = [('Referer','http://192.168.1.1/index.stm?title=Applications%20%26%20Gaming-QoS'),
+                   ('Authorization', 'Basic ' + self.base64Secret)]
+        self.opener.addheaders = headers
+        
+        params = urllib.urlencode(dict({
+            "delay":"0",
+            "qos":"0",
+            "wmm_enable":"0",
+            "noack_enable":"0",
+            "iap_enable":"0",
+            "cnt_game":"0",
+            "cnt_name":"",
+            "cnt_maddr":"00:00:00:00:00:00",
+            "cnt_ethport":"0",
+            "cnt_pfrom1":"",
+            "cnt_pto1":"",
+            "cnt_pproto1":"0",
+            "cnt_pfrom2":"",
+            "cnt_pto2":"",
+            "cnt_pproto2":"0",
+            "cnt_pfrom3":"",
+            "cnt_pto3":"",
+            "cnt_pproto3":"0",
+            "cur_idx":"0",
+            "mod_now":"0",
+            "EntryNum":"0",
+            "exec_cgis":"AppQ",
+            "ret_url":"/index.stm?title=Applications%20%26%20Gaming-QoS"}))
+        try:
+            self.opener.open(self.applyUrl, params)
+            print "WMM Support: Done!"
+        except HTTPError, e:
+            print "WMM Support: Failed! Error: " + str(e.getcode())
+            sys.exit()
         
 if __name__ == '__main__':
     ssid = raw_input("Enter SSID: ")
@@ -154,10 +295,17 @@ if __name__ == '__main__':
     print "SSID: " + ssid
     print "Wireless key: " + wirelessKey
     print "Channel: " + channel
-    yn = raw_input("Continue? (y/n)")
+    
+    router = FirmwareY()
+    router.LoginToRouter()
+    router.ConfigureSSID(ssid, channel)
+    router.ConfigureWirelessKey(wirelessKey)
+    router.DisableWMMSupport()
+    
+    '''yn = raw_input("Continue? (y/n)")
     
     if(yn == 'y'):
-        router = E900()
+        router = FirmwareX()
         print "First time setup: Dealing with unsecure.."
         router.DealWithUnsecure()
         print "Login: Trying to login.."
@@ -167,5 +315,6 @@ if __name__ == '__main__':
         router.ConfigureWirelessKey(wirelessKey)
         print "WMM Support: Trying to disable.."
         router.DisableWMMSupport()
-    print "Router setup is complete!"
+    print "Router setup is complete!"'''
+    
     
