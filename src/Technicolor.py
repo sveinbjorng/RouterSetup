@@ -110,13 +110,13 @@ if __name__ == '__main__':
         print "Wireless: Trying to setup wireless.."
         wifi = router.ConfigureWifi(ssid, "11", wirelessKey)
 
-        while(wifi != 0)
+        while(wifi != 0):
             wifi = router.ConfigureWifi(ssid, "11", wirelessKey)
             print "Wireless: Trying again.."
         
         print "PPPoE: Trying to setup PPPoE.."
         pppoe = router.ConfigurePPPoE(username, password)
-        while(pppoe != 0)
+        while(pppoe != 0):
             pppoe = router.ConfigurePPPoE(username, password)
             print "PPPoE: Trying again.."
 
