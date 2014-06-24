@@ -6,6 +6,7 @@ Created on Jun 4, 2014
 import urllib2, urllib, cookielib, re, hashlib, sys #@UnresolvedImport
 from urllib2 import HTTPError #@UnresolvedImport
 from py2app.script_py2applet import raw_input
+
 class TG589:
     def __init__(self):
         self.loginUrl = "http://192.168.1.254/login.lp"
@@ -57,7 +58,6 @@ class TG589:
             for y in postWifi:
                 if "HTTP/1.0 403 Forbidden" in y:
                     print "Wireless: setup failed!"
-                    sys.exit()
             print "Wireless: Done!"
             return 0
         
@@ -108,10 +108,18 @@ if __name__ == '__main__':
         print "Login: Done!"
         
         print "Wireless: Trying to setup wireless.."
-        router.ConfigureWifi(ssid, "11", wirelessKey)
+        wifi = router.ConfigureWifi(ssid, "11", wirelessKey)
+
+        while(wifi != 0)
+            wifi = router.ConfigureWifi(ssid, "11", wirelessKey)
+            print "Wireless: Trying again.."
         
         print "PPPoE: Trying to setup PPPoE.."
-        router.ConfigurePPPoE(username, password)
+        pppoe = router.ConfigurePPPoE(username, password)
+        while(pppoe != 0)
+            pppoe = router.ConfigurePPPoE(username, password)
+            print "PPPoE: Trying again.."
+
     print "Router setup is complete!"
     bla = raw_input("Press enter to exit.")
     
