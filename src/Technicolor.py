@@ -5,7 +5,6 @@ Created on Jun 4, 2014
 '''
 import urllib2, urllib, cookielib, re, hashlib, sys #@UnresolvedImport
 from urllib2 import HTTPError #@UnresolvedImport
-from py2app.script_py2applet import raw_input
 
 class TG589:
     def __init__(self):
